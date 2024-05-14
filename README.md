@@ -1,131 +1,100 @@
 # ios
+Before we start, here are the links you provided:
 
-struct ApiResponse: Codable {
-    let data: [ApiData]
-}
+UI Template: https://iOS.openinapp.co/UITemp
+API Endpoint: https://api.inopenapp.com/api/v1/dashboardNew
+Access Token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjU5MjcsImlhdCI6MTY3NDU1MDQ1MH0.dCkW0ox8t bjJA2GgUx2UEwNlbTZ7Rr38PVFJevYcXFI
+I have some questions before I begin:
 
-struct ApiData: Codable {
-    let title: String
-    let url: String
-    let clicks: Int
-    let impressions: Int
-}
+What data should be displayed in the chart?
+What data should be displayed in the Top links and Recent links tabs?
+Assuming that the chart should display the data from the data field of the API response, and the Top links and Recent links tabs should display the data from the topLinks and recentLinks fields respectively, here's a SwiftUI implementation that should meet your requirements:
 
-class ApiClient {
-    func fetchData(completion: @escaping (ApiResponse?) -> Void) {
-        let urlString = "https://api.inopenapp.com/api/v1/dashboardNew"
-        guard let url = URL(string: urlString) else {
-            completion(nil)
+
+import SwiftUI
+import Charts
+
+struct ContentView: View {
+    @State private var isLoading = true
+    @State private var apiResponse: ApiResponse?
+
+    var body: some View {
+        NavigationView {
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .onAppear(perform: loadData)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            greetingView
+                            chartView
+                            tabsView
+                        }
+                        .padding()
+                    }
+                }
+            }
+            .navigationTitle("Dashboard")
+        }
+    }
+
+    private var greetingView: some View {
+        HStack {
+            if let localTime = apiResponse?.localTime {
+                Text("Good \(localTime.hour >= 6 && localTime.hour < 12 ? "Morning" : localTime.hour >= 12 && localTime.hour < 18 ? "Afternoon" : "Evening"), it's \(localTime.formatted())!")
+                    .font(.title3)
+            }
+            Spacer()
+        }
+    }
+
+    private var chartView: some View {
+        if let data = apiResponse?.data {
+            Chart {
+                ForEach(data) { point in
+                    BarMark(
+                        x: .value("Value", point.value),
+                        y: .value("Timestamp", point.timestamp)
+                    )
+                    .foregroundStyle(.blue)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(position: .bottom) { _ in
+                    AxisValueLabel()
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisValueLabel()
+                }
+            }
+            .frame(height: 300)
+        }
+    }
+
+    private var tabsView: some View {
+        TabView {
+            if let topLinks = apiResponse?.topLinks {
+                LinksView(links: topLinks, title: "Top Links")
+            }
+            if let recentLinks = apiResponse?.recentLinks {
+                LinksView(links: recentLinks, title: "Recent Links")
+            }
+        }
+        .tabViewStyle(PageTabViewStyle())
+        .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+    }
+
+    private func loadData() {
+        guard let url = URL(string: "https://api.inopenapp.com/api/v1/dashboardNew") else {
+            print("Invalid API URL")
             return
         }
 
-        let accessToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjU5MjcsImlhdCI6MTY3NDU1MDQ1MH0.dCkW0ox8t bjJA2GgUx2UEwNlbTZ7Rr38PVFJevYcXFI"
         var request = URLRequest(url: url)
-        request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjU5MjcsI", forHTTPHeaderField: "Authorization")
 
-        URLSession.shared.dataTask(with: request) { (data, response, error) in
-            if let data = data {
-                let decoder = JSONDecoder()
-                do {
-                    let apiResponse = try decoder.decode(ApiResponse.self, from: data)
-                    completion(apiResponse)
-                } catch {
-                    print("Error decoding JSON: \(error)")
-                    completion(nil)
-                }
-            } else {
-                completion(nil)
-            }
-        }.resume()
-    }
+    // ...
 }
-Display a greeting based on the local time
-struct ContentView: View {
-    @State private var greeting = ""
-
-    var body: some View {
-        VStack {
-            Text(greeting)
-                .padding()
-            // ...
-        }
-        .onAppear {
-            let dateFormatter = DateFormatter()
-            dateFormatter.timeStyle = .short
-            let time = dateFormatter.string(from: Date())
-            let hour = Calendar.current.component(.hour, from: Date())
-            if hour < 12 {
-
-            To API request to display "Top links" and "Recent links"
-            let apiBaseUrl = "https://api.inopenapp.com/api/v1/dashboardNew"
-let accessToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjU5MjcsImlhdCI6MTY3NDU1MDQ1MH0.dCkW0ox8t bjJA2GgUx2UEwNlbTZ7Rr38PVFJevYcXFI"
-
-// Modify the API URL to display Top links
-let topLinksUrl = "\(apiBaseUrl)?access_token=\(accessToken)&type=top"
-
-// Modify the API URL to display Recent links
-let recentLinksUrl = "\(apiBaseUrl)?access_token=\(accessToken)&type=recent"
-
-
-#
-import SwiftUI
-
-struct Link: Decodable {
-    let id: Int
-    let title: String
-    let url: URL
-    let clicks: Int
-    let impressions: Int
-}
-
-struct DashboardData: Decodable {
-    let links: [Link]
-}
-
-class ApiClient {
-    func fetchDashboardData(url: URL, completion: @escaping (DashboardData?) -> Void) {
-        URLSession.shared.dataTask(with: url) { (data, response, error) in
-            if let data = data {
-                let decoder = JSONDecoder()
-                do {
-                    let dashboardData = try decoder.decode(DashboardData.self, from: data)
-                    completion(dashboardData)
-                } catch {
-                    print("Error decoding JSON: \(error)")
-                    completion(nil)
-                }
-            } else {
-                completion(nil)
-            }
-        }.resume()
-    }
-}
-
-struct ContentView: View {
-    @State private var topLinksData: DashboardData?
-    @State private var recentLinksData: DashboardData?
-
-    var body: some View {
-        VStack {
-            if topLinksData != nil && recentLinksData != nil {
-                TabView {
-                    LinkListView(title: "Top Links", links: topLinksData!.links)
-                        .tabItem {
-                            Text("Top")
-                        }
-                    LinkListView(title: "Recent Links", links: recentLinksData!.links)
-                        .tabItem {
-                            Text("Recent")
-                        }
-                }
-            } else {
-                ProgressView()
-                    .onAppear {
-                        let topLinksUrl = URL(string: "https://api.inopenapp.com/api/v1/dashboardNew?access_token=\(accessToken)&type=top")!
-                        let recentLinksUrl = URL(string: "https://api.inopenapp.com/api/v1/dashboardNew?access_token=\(accessToken)&type=recent")!
-
-                        ApiClient().fetchDashboardData(url: topLinksUrl) { (topLinksData) in
-                            self.topLinksData = topLinksData
-                        }
-
-                        ApiClient().fetchDashboardData(url: recentLinks
