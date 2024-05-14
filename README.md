@@ -13,8 +13,8 @@ What data should be displayed in the Top links and Recent links tabs?
 Assuming that the chart should display the data from the data field of the API response, and the Top links and Recent links tabs should display the data from the topLinks and recentLinks fields respectively, here's a SwiftUI implementation that should meet your requirements:
 
 
-import SwiftUI
-import Charts
+#import SwiftUI
+#import Charts
 
 struct ContentView: View {
     @State private var isLoading = true
