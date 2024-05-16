@@ -13,8 +13,8 @@ What data should be displayed in the Top links and Recent links tabs?
 Assuming that the chart should display the data from the data field of the API response, and the Top links and Recent links tabs should display the data from the topLinks and recentLinks fields respectively, here's a SwiftUI implementation that should meet your requirements:
 
 
-#import SwiftUI
-#import Charts
+import SwiftUI
+import Charts
 
 struct ContentView: View {
     @State private var isLoading = true
@@ -63,12 +63,12 @@ struct ContentView: View {
                 }
             }
             .chartXAxis {
-                AxisMarks(position: .bottom) { _ in
+                AxisMarks(position: .bottom) {
                     AxisValueLabel()
                 }
             }
             .chartYAxis {
-                AxisMarks(position: .leading) { _ in
+                AxisMarks(position: .leading) {
                     AxisValueLabel()
                 }
             }
@@ -98,5 +98,84 @@ struct ContentView: View {
         var request = URLRequest(url: url)
         request.setValue("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjU5MjcsI", forHTTPHeaderField: "Authorization")
 
-    // ...
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let data = data {
+                do {
+                    let decodedResponse = try JSONDecoder().decode(ApiResponse.self, from: data)
+                    DispatchQueue.main.async {
+                        self.apiResponse = decodedResponse
+                        self.isLoading = false
+                    }
+                } catch {
+                    print("Error decoding API response: \(error)")
+                }
+            } else if let error = error {
+                print("Network error: \(error)")
+            }
+        }.resume()
+    }
+}
+
+Data Model:
+struct ApiResponse: Decodable {
+    var localTime: LocalTime
+    var data: [DataPoint]
+    var topLinks: [Link]
+    var recentLinks: [Link]
+}
+
+struct LocalTime: Decodable {
+    var hour: Int
+    func formatted() -> String {
+        return "\(hour):00"
+    }
+}
+
+struct DataPoint: Identifiable, Decodable {
+    var id: UUID
+    var value: Double
+    var timestamp: String
+}
+
+struct Link: Identifiable, Decodable {
+    var id: UUID
+    var title: String
+}
+
+
+Sample data : 
+{
+  "localTime": {
+    "hour": 10
+  },
+  "data": [
+    {"id": "1", "value": 50.0, "timestamp": "2024-05-15T10:00:00Z"},
+    {"id": "2", "value": 75.0, "timestamp": "2024-05-15T11:00:00Z"},
+    {"id": "3", "value": 60.0, "timestamp": "2024-05-15T12:00:00Z"}
+  ],
+  "topLinks": [
+    {"id": "1", "title": "Top Link 1"},
+    {"id": "2", "title": "Top Link 2"}
+  ],
+  "recentLinks": [
+    {"id": "3", "title": "Recent Link 1"},
+    {"id": "4", "title": "Recent Link 2"}
+  ]
+}
+
+
+Link View:
+struct LinksView: View {
+    var links: [Link]
+    var title: String
+
+    var body: some View {
+        VStack {
+            Text(title)
+                .font(.title2)
+            ForEach(links) { link in
+                Text(link.title)
+            }
+        }
+    }
 }
